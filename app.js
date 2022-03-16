@@ -16,6 +16,8 @@ app.use(bodyParser.json())
 //Register the middleware - Route starts with /api/expenses
 app.use("/api/expenses", expensesRoutes);
 
+app.use("/api/users/",userRoutes)
+
 // Request that doesn't get a response
 app.use((req, res, next) => {
     const error = new HttpError('Could not find route',404);

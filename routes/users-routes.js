@@ -1,23 +1,19 @@
 const express = require("express");
 
-// Special middleware that can be exported
+const {check} = require('express-validator')
+
+const userController = require("../controllers/users-controllers")
+
 const router = express.Router();
 
-const DUMMY_EXPENSES = [
-  {
-    id: "e1",
-    title: "Miscellaneous Expense",
-    description: "Yadadada",
-    amount: 10,
-    owner: "u1",
-  },
-];
+router.get("/", userController.getAllUsers);
 
-router.get("/:userId", (req, res, next) => {
-//   const userId = req.params.userId;
-//   const place = DUMMY_EXPENSES.find((expense) => expense.owner === userId);
-//   // Response automatically sent back
-//   res.json({ place });
-});
+router.post("/signup",[
+  check('email').normalizeEmail().isEmail(),
+  check('name').not().isEmpty(),
+  check('password').isLength({min:6})
+],userController.signUp)
+
+router.post("/login",userController.login)
 
 module.exports = router;

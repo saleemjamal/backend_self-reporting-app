@@ -1,6 +1,7 @@
 const express = require("express");
 
-// Special middleware that can be exported
+const { check } = require("express-validator");
+
 const router = express.Router();
 
 const expenseControllers = require("../controllers/expenses-controllers");
@@ -9,10 +10,23 @@ router.get("/:expenseId", expenseControllers.getExpenseById);
 
 router.get("/user/:userId", expenseControllers.getExpensesByUserId);
 
-router.post("/expenseId", expenseControllers.createExpense);
+router.post(
+  "/",
+  [
+    check("title").not().isEmpty(),
+    check("description").isLength({ min: 5 }),
+    check("amount").isNumeric(),
+    check("owner").not().isEmpty(),
+  ],
+  expenseControllers.createExpense
+);
 
-router.patch("/:expenseId",expenseControllers.updateExpense);
+router.patch(
+  "/:expenseId",
+  [check("title").not().isEmpty(), check("description").isLength({ min: 5 })],
+  expenseControllers.updateExpense
+);
 
-router.delete("/:expenseId",expenseControllers.deleteExpense);
+router.delete("/:expenseId", expenseControllers.deleteExpense);
 
 module.exports = router;

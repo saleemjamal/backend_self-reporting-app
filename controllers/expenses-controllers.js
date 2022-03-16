@@ -1,5 +1,7 @@
 const HttpError = require("../models/http-error");
 
+const { validationResult } = require("express-validator");
+
 const { v4: uuidv4 } = require("uuid");
 
 let DUMMY_EXPENSES = [
@@ -30,7 +32,7 @@ const getExpenseById = (req, res, next) => {
 const getExpensesByUserId = (req, res, next) => {
   const userId = req.params.userId;
   const expenses = DUMMY_EXPENSES.filter((expense) => expense.owner === userId);
-  if (!expenses || expenses.length===0) {
+  if (!expenses || expenses.length === 0) {
     // const error = new Error("Could not find a place for provided user id ");
     // error.code = 404;
     // return next(error);
@@ -42,6 +44,12 @@ const getExpensesByUserId = (req, res, next) => {
 };
 
 const createExpense = (req, res, next) => {
+  const errors = validationResult(req);
+
+  if (!errors.isEmpty()) {
+    console.log(errors);
+    throw new HttpError("Invalid inputs passed, please check your data", 422);
+  }
   const { title, description, amount, owner } = req.body;
   const createdExpense = { id: uuidv4(), title, description, amount, owner }; // title:title, etc.
   DUMMY_EXPENSES.push(createdExpense);
@@ -50,6 +58,12 @@ const createExpense = (req, res, next) => {
 };
 
 const updateExpense = (req, res, next) => {
+  const errors = validationResult(req);
+
+  if (!errors.isEmpty()) {
+    console.log(errors);
+    throw new HttpError("Invalid Inputs, please check your data", 422);
+  }
   const { title, description } = req.body;
   const expenseId = req.params.expenseId;
 
@@ -73,6 +87,10 @@ const updateExpense = (req, res, next) => {
 
 const deleteExpense = (req, res, next) => {
   const expenseId = req.params.expenseId;
+
+  if (!DUMMY_EXPENSES.find((expense) => expense.id === expenseId)) {
+    throw new HttpError('Could not find any such place!',404)
+  }
   DUMMY_EXPENSES = DUMMY_EXPENSES.filter((expense) => expense.id !== expenseId);
   res.status(200).json({ message: "Delete expense successfully!" });
 };
