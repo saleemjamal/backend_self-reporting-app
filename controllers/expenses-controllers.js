@@ -3,96 +3,222 @@ const HttpError = require("../models/http-error");
 const { validationResult } = require("express-validator");
 
 const { v4: uuidv4 } = require("uuid");
+const mongoose = require("mongoose");
 
-let DUMMY_EXPENSES = [
-  {
-    id: "e1",
-    title: "Miscellaneous Expense",
-    description: "Yadadada",
-    amount: 10,
-    owner: "u1",
-  },
-];
+const Expense = require("../models/expense");
+const User = require("../models/user");
 
-const getExpenseById = (req, res, next) => {
+// let DUMMY_EXPENSES = [
+//   {
+//     id: "e1",
+//     title: "Miscellaneous Expense",
+//     description: "Yadadada",
+//     amount: 10,
+//     owner: "u1",
+//   },
+// ];
+
+const getExpenseById = async (req, res, next) => {
   const expenseId = req.params.expenseId;
-  const expense = DUMMY_EXPENSES.find((expense) => expense.id === expenseId);
+
+  let expense;
+  try {
+    expense = await Expense.findById(expenseId);
+  } catch (err) {
+    const error = new HttpError(
+      "Could not find expense with id " + expenseId,
+      500
+    );
+    return next(error);
+  }
+
   // Response automatically sent back
   if (!expense) {
-    // const error = new Error(
-    //   "Could not find a place for provided id " + expenseId
-    // );
-    // error.code = 404;
-    // throw error;
-    throw new HttpError("Could not find an expense for provided id.", 404);
+    const error = new HttpError(
+      "Could not find an expense for provided id.",
+      404
+    );
+    return next(error);
   }
-  res.json({ expense });
+  res.json({ expense: expense.toObject({ getters: true }) });
 };
 
-const getExpensesByUserId = (req, res, next) => {
+const getExpensesByUserId = async (req, res, next) => {
   const userId = req.params.userId;
-  const expenses = DUMMY_EXPENSES.filter((expense) => expense.owner === userId);
-  if (!expenses || expenses.length === 0) {
-    // const error = new Error("Could not find a place for provided user id ");
-    // error.code = 404;
-    // return next(error);
+  // const expenses = DUMMY_EXPENSES.filter((expense) => expense.owner === userId);
+
+  // let expenses;
+  let userWithExpenses;
+  try {
+    // expenses = await Expense.find({ owner: userId });
+    userWithExpenses = await User.findById(userId).populate('expenses');
+  } catch (err) {
+    const error = new HttpError("Something went wrong!", 500);
+    return next(error);
+  }
+
+  if (!userWithExpenses || userWithExpenses.expenses.length === 0) {
     return next(
       new HttpError("Could not find an expense for the provided user id.", 404)
     );
   }
-  res.json({ expenses });
+  res.json({
+    expenses: userWithExpenses.expenses.map((expense) => expense.toObject({ getters: true })),
+  });
 };
 
-const createExpense = (req, res, next) => {
+const createExpense = async (req, res, next) => {
   const errors = validationResult(req);
 
   if (!errors.isEmpty()) {
     console.log(errors);
-    throw new HttpError("Invalid inputs passed, please check your data", 422);
+    return next(
+      new HttpError("Invalid inputs passed, please check your data", 422)
+    );
   }
-  const { title, description, amount, owner } = req.body;
-  const createdExpense = { id: uuidv4(), title, description, amount, owner }; // title:title, etc.
-  DUMMY_EXPENSES.push(createdExpense);
+  const { category, title, description, amount, owner } = req.body;
 
+  const createdExpense = new Expense({
+    category,
+    title,
+    description,
+    amount,
+    image:
+      "https://quickbooks.intuit.com/oidam/intuit/sbseg/en_us/Blog/Graphic/quickbooks_editorial7_graphic4.png",
+    owner,
+  });
+
+  // Check if the user id exists in the
+  let user;
+  try {
+    user = await User.findById(owner);
+  } catch (err) {
+    const error = new HttpError("Creating place failed", 500);
+    return next(error);
+  }
+
+  if (!user) {
+    const error = new HttpError("Could not find user", 404);
+    return next(error);
+  }
+
+  console.log(user);
+
+  try {
+    // await createdExpense.save();
+    const sess = await mongoose.startSession();
+    sess.startTransaction();
+    await createdExpense.save({ session: sess });
+    user.expenses.push(createdExpense); // adds expense id to user
+    await user.save({ session: sess });
+    await sess.commitTransaction();
+  } catch (err) {
+    const error = new HttpError(err.message, 500);
+    return next(error);
+  }
   res.status(201).json({ expense: createdExpense });
 };
 
-const updateExpense = (req, res, next) => {
+const updateExpense = async (req, res, next) => {
   const errors = validationResult(req);
 
   if (!errors.isEmpty()) {
     console.log(errors);
-    throw new HttpError("Invalid Inputs, please check your data", 422);
+    return next(
+      new HttpError("Invalid inputs passed, please check your data", 422)
+    );
   }
   const { title, description } = req.body;
   const expenseId = req.params.expenseId;
 
   // To update, we should create a copy first.
   // Use spread operator for this
-  const updatedExpense = {
-    ...DUMMY_EXPENSES.find((expense) => expense.id === expenseId),
-  };
+  // const updatedExpense = {
+  //   ...DUMMY_EXPENSES.find((expense) => expense.id === expenseId),
+  // };
 
-  const expenseIndex = DUMMY_EXPENSES.findIndex(
-    (expense) => expense.id === expenseId
-  );
+  // const expenseIndex = DUMMY_EXPENSES.findIndex(
+  //   (expense) => expense.id === expenseId
+  // );
 
-  updatedExpense.title = title;
-  updatedExpense.description = description;
+  let expense;
+  try {
+    expense = await Expense.findById(expenseId);
+  } catch (err) {
+    const error = new HttpError(
+      "Could not find expense with id " + expenseId,
+      500
+    );
+    return next(error);
+  }
 
-  DUMMY_EXPENSES[expenseIndex] = updatedExpense;
+  expense.title = title;
+  expense.description = description;
 
-  res.status(200).json({ expense: updatedExpense });
+  try {
+    await expense.save();
+  } catch (err) {
+    const error = new HttpError(
+      "Something went wrong! Could not update place!",
+      500
+    );
+    return next(error);
+  }
+
+  // DUMMY_EXPENSES[expenseIndex] = updatedExpense;
+
+  res.status(200).json({ expense: expense.toObject({ getters: true }) });
 };
 
-const deleteExpense = (req, res, next) => {
+const deleteExpense = async (req, res, next) => {
   const expenseId = req.params.expenseId;
 
-  if (!DUMMY_EXPENSES.find((expense) => expense.id === expenseId)) {
-    throw new HttpError('Could not find any such place!',404)
+  // if (!DUMMY_EXPENSES.find((expense) => expense.id === expenseId)) {
+  //   throw new HttpError("Could not find any such place!", 404);
+  // }
+  // DUMMY_EXPENSES = DUMMY_EXPENSES.filter((expense) => expense.id !== expenseId);
+
+  let expense;
+  try {
+    // Populate allows us to refer to data from another collection
+    // and work with data from the other collection. We need a relationship
+    // between the two documents (ref:'User' & ref:'Expense')
+
+    expense = await Expense.findById(expenseId).populate("owner");
+  } catch (err) {
+    const error = new HttpError(
+      "Could not find expense with id " + expenseId,
+      500
+    );
+    return next(error);
   }
-  DUMMY_EXPENSES = DUMMY_EXPENSES.filter((expense) => expense.id !== expenseId);
-  res.status(200).json({ message: "Delete expense successfully!" });
+
+  if (!expense) {
+    return next(new HttpError("Could not find expense!", 404));
+  }
+
+  try {
+    const sess = await mongoose.startSession();
+    sess.startTransaction();
+    await expense.remove({ session: sess });
+
+    // New Code
+    // Can do this because of the populate function
+    expense.owner.expenses.pull(expense);
+    await expense.owner.save({ session: sess });
+
+    // New code
+
+    await sess.commitTransaction();
+  } catch (err) {
+    const error = new HttpError(
+      "Could not find expense with id " + expenseId,
+      500
+    );
+    return next(error);
+  }
+
+  res.status(200).json({ message: "Delete expense successful!" });
 };
 
 exports.getExpenseById = getExpenseById;

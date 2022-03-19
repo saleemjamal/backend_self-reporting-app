@@ -13,6 +13,7 @@ router.get("/user/:userId", expenseControllers.getExpensesByUserId);
 router.post(
   "/",
   [
+    check("category").not().isEmpty(),
     check("title").not().isEmpty(),
     check("description").isLength({ min: 5 }),
     check("amount").isNumeric(),
