@@ -49,8 +49,9 @@ const signUp = async (req, res, next) => {
 
   try {
     const existingUser = await User.findOne({ email: email });
+    console.log(existingUser)
   } catch (err) {
-    const error = new HttpError(err.message, 500);
+    const error = new HttpError('User already exists!', 500);
     return next(error);
   }
 
@@ -82,7 +83,6 @@ const login = async (req, res, next) => {
   const { email, password } = req.body;
 
   // const identifiedUser = DUMMY_USERS.find((user) => user.email === email);
-
   // if (!identifiedUser || identifiedUser.password !== password) {
   //   throw new HttpError("User was not found! Credentials not matching", 401);
   // }
@@ -101,7 +101,7 @@ const login = async (req, res, next) => {
     return next(error);
   }
 
-  res.json({ message: "Logged In!" });
+  res.json({ message: "Logged In!", user:existingUser.toObject({ getters: true })});
 };
 
 exports.getAllUsers = getAllUsers;

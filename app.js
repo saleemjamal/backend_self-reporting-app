@@ -14,6 +14,18 @@ const app = express();
 
 app.use(bodyParser.json());
 
+// Adding middleware to work around CORS issues
+app.use((req, res, next) => {
+  // Controls which domains have access
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    "Origin, X-Requested-With, Content-Type, Accept, Authorization"
+  );
+  res.setHeader("Access-Control-Allow-Methods",'GET, POST,PATCH, DELETE')
+  next();
+});
+
 //Register the middleware - Route starts with /api/expenses
 app.use("/api/expenses", expensesRoutes);
 
@@ -34,14 +46,14 @@ app.use((error, req, res, next) => {
   res.json({ message: error.message || "An unknown error occurred!" });
 });
 
-
 //Connect to backend server only if database can be found.
 mongoose
-  .connect('mongodb+srv://saleem:paVLUUoiPZEotYTs@cluster0.ftbrm.mongodb.net/expenses?retryWrites=true&w=majority')
+  .connect(
+    "mongodb+srv://saleem:paVLUUoiPZEotYTs@cluster0.ftbrm.mongodb.net/mern?retryWrites=true&w=majority"
+  )
   .then(() => {
     app.listen(5000);
   })
-  .catch(err=>{
+  .catch((err) => {
     console.log(err);
   });
-

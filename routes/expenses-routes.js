@@ -16,8 +16,7 @@ router.post(
     check("category").not().isEmpty(),
     check("title").not().isEmpty(),
     check("description").isLength({ min: 5 }),
-    check("amount").isNumeric(),
-    check("owner").not().isEmpty(),
+    check("amount").isNumeric()
   ],
   expenseControllers.createExpense
 );

@@ -51,7 +51,7 @@ const getExpensesByUserId = async (req, res, next) => {
   let userWithExpenses;
   try {
     // expenses = await Expense.find({ owner: userId });
-    userWithExpenses = await User.findById(userId).populate('expenses');
+    userWithExpenses = await User.findById(userId).populate("expenses");
   } catch (err) {
     const error = new HttpError("Something went wrong!", 500);
     return next(error);
@@ -63,7 +63,9 @@ const getExpensesByUserId = async (req, res, next) => {
     );
   }
   res.json({
-    expenses: userWithExpenses.expenses.map((expense) => expense.toObject({ getters: true })),
+    expenses: userWithExpenses.expenses.map((expense) =>
+      expense.toObject({ getters: true })
+    ),
   });
 };
 
@@ -108,9 +110,9 @@ const createExpense = async (req, res, next) => {
     // await createdExpense.save();
     const sess = await mongoose.startSession();
     sess.startTransaction();
-    await createdExpense.save({ session: sess });
+    await createdExpense.save({ session: sess, validateModifiedOnly: true });
     user.expenses.push(createdExpense); // adds expense id to user
-    await user.save({ session: sess });
+    await user.save({ session: sess, validateModifiedOnly: true });
     await sess.commitTransaction();
   } catch (err) {
     const error = new HttpError(err.message, 500);
