@@ -188,9 +188,10 @@ const deleteExpense = async (req, res, next) => {
     // between the two documents (ref:'User' & ref:'Expense')
 
     expense = await Expense.findById(expenseId).populate("owner");
+    // console.log(expense);
   } catch (err) {
     const error = new HttpError(
-      "Could not find expense with id " + expenseId,
+      "Could not find expense with id " + expenseId+" Error message:  "+err.message,
       500
     );
     return next(error);
@@ -209,7 +210,7 @@ const deleteExpense = async (req, res, next) => {
 
     // New Code
     // Can do this because of the populate function
-    expense.owner.expenses.pull(expense);
+    await expense.owner.expenses.pull(expense);
     await expense.owner.save({ session: sess });
 
     // New code
@@ -217,7 +218,7 @@ const deleteExpense = async (req, res, next) => {
     await sess.commitTransaction();
   } catch (err) {
     const error = new HttpError(
-      "Could not find expense with id " + expenseId,
+      "Could not find expense with id " + expenseId + " Error message:  " + err.message,
       500
     );
     return next(error);
