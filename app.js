@@ -1,3 +1,6 @@
+const fs = require("fs");
+const path = require("path");
+
 const express = require("express");
 const bodyParser = require("body-parser");
 const mongoose = require("mongoose");
@@ -14,6 +17,11 @@ const app = express();
 
 app.use(bodyParser.json());
 
+// A http request can only be made to the images
+// like this. express.static(), releases a middleware
+//
+app.use("/uploads/images", express.static(path.join("uploads", "images")));
+
 // Adding middleware to work around CORS issues
 app.use((req, res, next) => {
   // Controls which domains have access
@@ -22,7 +30,7 @@ app.use((req, res, next) => {
     "Access-Control-Allow-Headers",
     "Origin, X-Requested-With, Content-Type, Accept, Authorization"
   );
-  res.setHeader("Access-Control-Allow-Methods",'GET, POST,PATCH, DELETE')
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST,PATCH, DELETE");
   next();
 });
 
@@ -38,7 +46,13 @@ app.use((req, res, next) => {
 });
 
 // Function executes if any middleware before this has an error
+// Server side error handling logic.
 app.use((error, req, res, next) => {
+  if (req.file) {
+    fs.unlink(req.file.path, (err) => {
+      console.log(err);
+    });
+  }
   if (res.headerSent) {
     return next(error);
   }
@@ -49,7 +63,7 @@ app.use((error, req, res, next) => {
 //Connect to backend server only if database can be found.
 mongoose
   .connect(
-    "mongodb+srv://saleem:paVLUUoiPZEotYTs@cluster0.ftbrm.mongodb.net/mern?retryWrites=true&w=majority"
+    "mongodb+srv://saleem:TNYBXmQmDRtCOro8@cluster0.dhivn.mongodb.net/MERN?retryWrites=true&w=majority"
   )
   .then(() => {
     app.listen(5000);

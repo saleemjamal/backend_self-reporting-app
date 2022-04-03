@@ -1,5 +1,7 @@
 const HttpError = require("../models/http-error");
 
+const fs = require("fs");
+
 const { validationResult } = require("express-validator");
 
 const { v4: uuidv4 } = require("uuid");
@@ -85,8 +87,7 @@ const createExpense = async (req, res, next) => {
     title,
     description,
     amount,
-    image:
-      "https://quickbooks.intuit.com/oidam/intuit/sbseg/en_us/Blog/Graphic/quickbooks_editorial7_graphic4.png",
+    image:req.file.path, // Given by Multer
     owner,
   });
 
@@ -199,6 +200,8 @@ const deleteExpense = async (req, res, next) => {
     return next(new HttpError("Could not find expense!", 404));
   }
 
+  const imagePath = expense.image;
+
   try {
     const sess = await mongoose.startSession();
     sess.startTransaction();
@@ -219,6 +222,10 @@ const deleteExpense = async (req, res, next) => {
     );
     return next(error);
   }
+
+  fs.unlink(imagePath,(err)=>{
+    console.log(err)
+  })
 
   res.status(200).json({ message: "Delete expense successful!" });
 };

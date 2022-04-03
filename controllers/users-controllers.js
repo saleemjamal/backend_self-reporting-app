@@ -4,21 +4,6 @@ const { validationResult } = require("express-validator");
 
 const User = require("../models/user");
 
-// const DUMMY_USERS = [
-//   {
-//     id: "u1",
-//     name: "Saleem Jamal",
-//     email: "saleem.jamal@gmail.com",
-//     password: "12345",
-//   },
-//   {
-//     id: "u2",
-//     name: "Jamal Saleem",
-//     email: "jamal.saleem@gmail.com",
-//     password: "54321",
-//   },
-// ];
-
 // Get Users
 const getAllUsers = async (req, res, next) => {
   let users;
@@ -37,21 +22,12 @@ const signUp = async (req, res, next) => {
     return next(new HttpError("The inputs are invalid. Please check", 422));
   }
   const { name, email, password } = req.body;
-
-  // const hasUser = DUMMY_USERS.find((user) => user.email === email);
-  // if (hasUser) {
-  //   throw new HttpError("Could not create user, email already exists", 422);
-  // }
-
-  // const newUser = { id: uuidv4(), name, email, password };
-  // DUMMY_USERS.push(newUser);
   let existingUser;
-
   try {
     const existingUser = await User.findOne({ email: email });
-    console.log(existingUser)
+    console.log(existingUser);
   } catch (err) {
-    const error = new HttpError('User already exists!', 500);
+    const error = new HttpError("User already exists!", 500);
     return next(error);
   }
 
@@ -64,9 +40,8 @@ const signUp = async (req, res, next) => {
     name,
     email,
     password,
-    image:
-      "https://quickbooks.intuit.com/oidam/intuit/sbseg/en_us/Blog/Graphic/quickbooks_editorial7_graphic4.png",
-    expenses:[],
+    image: req.file.path,
+    expenses: [],
   });
 
   try {
@@ -96,12 +71,16 @@ const login = async (req, res, next) => {
     return next(error);
   }
 
+  // Old password logic
   if (!existingUser || existingUser.password !== password) {
     const error = new HttpError("Invalid Credentials", 401);
     return next(error);
   }
 
-  res.json({ message: "Logged In!", user:existingUser.toObject({ getters: true })});
+  res.json({
+    message: "Logged In!",
+    user: existingUser.toObject({ getters: true }),
+  });
 };
 
 exports.getAllUsers = getAllUsers;
